@@ -1,0 +1,156 @@
+<html>
+    <head>
+        <title>Portal do cliente</title>
+        <link href="style.css" rel="stylesheet"/>
+    </head>
+    <body>
+        <div style="display:none" class="usuario">
+            <div class="tudo">
+                <div class="criarUsuario">
+                    <h2>Criar Conta</h2>
+                    <form class="conta">
+                        <input id="email-cadastro" type="text" placeholder="Digite seu email...">
+                        <input id="username-cadastro" type="text" placeholder="Digite seu nome completo...">
+                        <input id="senha-cadastro" type="password" placeholder="Digite sua senha...">
+                        <input id="senha-cadastro" type="password" placeholder="Confirme sua senha...">
+                        <input type="submit" value="Criar Conta!">
+                    </form>
+                <div class="loginUsuario"></div>
+                    <h2>Login</h2>
+                    <form class="login">
+                        <input id="email-login" type="text" placeholder="Digite seu email...">
+                        <input id="senha-login" type="password" placeholder="Digite sua senha...">
+                        <input type="submit" value="Logar!">
+                    </form>
+                <div>
+            </div>
+        </div>
+        <div style="display:none" class="cliente">
+            <h2>Deseja dar aulas na plataforma?</h2>
+
+            <form id="form-cliente">
+                <textarea placeholder="Qual curso gostaria de dar?" name="comprovante"></textarea>
+                <input type="file" name="arquivo">
+                <input type="submit" name="acao" value="Enviar!">
+            </form>
+        </div>
+
+        <div style="display:none" class="admin">
+            <a id="login" href="#"><img src="googleLogin.png"/></a>
+            <div style="display:none" class="listar-pedidos">
+                <h1 style="color:white; padding:20px;">Ultimas solicitacoes:</h1>
+                <div class="pedidos">
+                </div>
+            </div>
+        </div>
+    
+        <script src="https://www.gstatic.com/firebasejs/8.6.3/firebase-app.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.5.0/firebase-auth.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.5.0/firebase-firestore.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/8.5.0/firebase-storage.js"></script>
+
+        <script type="module">        
+        
+          const firebaseConfig = {
+            apiKey: "AIzaSyBjXSJPYQ29A4uS6d33-T5cI64p3yyp8Wk",
+            authDomain: "portal-cliente-56a90.firebaseapp.com",
+            projectId: "portal-cliente-56a90",
+            storageBucket: "portal-cliente-56a90.appspot.com",
+            messagingSenderId: "1025726052106",
+            appId: "1:1025726052106:web:55438c13cc4666b0e26cf3",
+            measurementId: "G-V7HELY9HX8"
+          };
+                
+          firebase.initializeApp(firebaseConfig)
+          const storage = firebase.storage() // upload arquivos
+          const db = firebase.firestore() // base de dados
+          const auth = firebase.auth();
+          const provider = new firebase.auth.GoogleAuthProvider();
+
+          const formCliente = document.querySelector("#form-cliente")
+
+          formCliente.addEventListener("submit", (e)=>{
+            e.preventDefault();
+            let comprovanteText = document.querySelector("[name=comprovante]").value;
+            let arquivo = document.querySelector("[name=arquivo]").files[0];
+            const uploadtask = storage.ref("documentos/"+arquivo.name).put(arquivo);
+            let now = new Date;
+            const time = now.getHours() + ":" + now.getMinutes();
+            console.log(time)
+            uploadtask.on("state_changed", (snapshot)=>{
+                const progress = (snapshot.bytesTransferred/snapshot.totalBytes) * 1;
+                console.log(progress);
+            },
+            function(error){
+
+            },
+
+            function(){
+                storage.ref("documentos/"+arquivo.name).getDownloadURL().then((url) =>{
+                    db.collection("documentos").add({   // adicionamento dos dados no banco de dados
+                        descricao: comprovanteText,
+                        arquivoURL: url,
+                        postTime: parseInt(time)
+                    })
+                })
+            }
+            )
+
+          })
+          const loginBtn = document.getElementById("login");
+          loginBtn.addEventListener("click", (e) =>{
+              e.preventDefault();
+              // abrir pouup do google pra fazer login
+              auth.signInWithPopup(provider);
+
+          })
+          auth.onAuthStateChanged((val) =>{
+              if(val.email == "thomas.henrique.schmitz@gmail.com"){
+                  loginBtn.style.display = "none"
+                  document.querySelector(".listar-pedidos").style.display = "block"
+              }else{
+                  alert("Este email nao eh autorizado")
+              }
+          })
+        
+
+        db.collection("documentos").onSnapshot((data) =>{
+            let list = document.querySelector(".pedidos")
+            list.innerHTML = "";
+            data.docs.map((val) =>{
+                list.innerHTML+=`
+                <div class="info-imagem">
+                    <div style="background-color:white; padding:20px; margin-bottom: 20px; text-align:left" class="single-pedido">
+                        <h2>${val.data().descricao}</h2>
+                        <img style="max-width:250px; margin-top: 20px" src="${val.data().arquivoURL}"/>
+                        <p>Postado as ${val.data().postTime}    
+                    </div>
+                </div>
+                <div class="info-usuario">
+
+                </div>
+                <hr>
+
+
+                `;
+            })
+        })            // monitorar em tempo real(snapshot) para listar
+        </script>
+        <script>
+            const urlParams = new URLSearchParams(window.location.search);
+            const myParam = urlParams.get("admin");
+
+            if (myParam != null){
+                // eu quero entrar na area administrativa
+
+                const adminArea = document.querySelector(".admin")
+                adminArea.style.display = "block";
+            }else{
+                // eu sou usuario
+                const loginArea = document.querySelector(".usuario")
+                loginArea.style.display = "block"
+            }
+        </script>
+
+    </body>
+</html>
